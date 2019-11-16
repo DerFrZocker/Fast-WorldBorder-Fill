@@ -1,29 +1,34 @@
-package de.derfrzocker.fast.worldborder.fill;
+package de.derfrzocker.fast.worldborder.fill.api;
 
+import org.apache.commons.lang.Validate;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public class WorldBorderThread extends Thread {
 
-    private volatile Runnable runnable = null;
-
     private final Object toNotify = new Object();
-
-    private final WorldBorderFill worldBorderFill;
-
+    @NotNull
+    private final WorldBorderFillTask worldBorderFillTask;
+    @NotNull
+    private final Consumer<WorldBorderThread> finishConsumer;
     private final long sleepTime;
-
-    public volatile int runs;
-
-    public volatile String status;
-
-    public int x;
-    public int z;
+    private volatile Runnable runnable = null;
+    private volatile int runs;
+    private volatile String status;
+    private int x;
+    private int z;
 
     private String name;
 
-    public WorldBorderThread(WorldBorderFill worldBorderFill, long sleepTime) {
-        this.worldBorderFill = worldBorderFill;
+    public WorldBorderThread(@NotNull final WorldBorderFillTask worldBorderFillTask, final long sleepTime, @NotNull final Consumer<WorldBorderThread> finishConsumer) {
+        Validate.notNull(worldBorderFillTask, "WorldBorderFillTask can not be null");
+        Validate.notNull(finishConsumer, "FinishConsumer can not be null");
+
+        this.worldBorderFillTask = worldBorderFillTask;
         this.sleepTime = sleepTime;
+        this.finishConsumer = finishConsumer;
     }
 
     @Override
@@ -73,14 +78,14 @@ public class WorldBorderThread extends Thread {
                     }
                 }
 
-                worldBorderFill.add(this);
+                finishConsumer.accept(this);
 
             }
         }
 
     }
 
-    public void setAndNotifyRunnable(Runnable runnable, int x, int z) {
+    public void setAndNotifyRunnable(@NotNull final Runnable runnable, final int x, final int z) {
         synchronized (toNotify) {
 
             this.runnable = runnable;
@@ -91,18 +96,23 @@ public class WorldBorderThread extends Thread {
         }
     }
 
-    public void printStatus(Logger logger) {
+    public void printStatus() {
+        final Logger logger = worldBorderFillTask.getLogger();
         logger.info("----------" + name + "----------");
         logger.info("Status: " + status);
         logger.info("X: " + x);
         logger.info("Z: " + z);
         logger.info("Runs: " + runs);
-        logger.info("Contains: " + worldBorderFill.threads.contains(this));
+        logger.info("Contains: " + worldBorderFillTask.getWaitingWorldBorderThreads().contains(this));
         logger.info("----------" + name + "----------");
     }
 
-    public void restart() {
-        worldBorderFill.add(this);
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getStatus() {
+        return this.status;
     }
 
 }

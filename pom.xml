@@ -47,6 +47,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations-java5</artifactId>
+            <version>17.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>de.derfrzocker</groupId>
             <artifactId>spigot-utils</artifactId>
             <version>dev-35-SNAPSHOT</version>

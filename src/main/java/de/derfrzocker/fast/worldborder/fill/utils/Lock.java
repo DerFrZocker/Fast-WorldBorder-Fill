@@ -1,4 +1,4 @@
-package de.derfrzocker.fast.worldborder.fill;
+package de.derfrzocker.fast.worldborder.fill.utils;
 
 public class Lock {
 

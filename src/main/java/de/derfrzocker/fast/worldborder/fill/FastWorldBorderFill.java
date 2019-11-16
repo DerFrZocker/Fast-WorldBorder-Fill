@@ -1,11 +1,17 @@
 package de.derfrzocker.fast.worldborder.fill;
 
+import de.derfrzocker.fast.worldborder.fill.api.WorldBorderFillService;
+import de.derfrzocker.fast.worldborder.fill.api.WorldBorderFillSetting;
+import de.derfrzocker.fast.worldborder.fill.api.WorldBorderFillTask;
+import de.derfrzocker.fast.worldborder.fill.impl.BasicRegion;
+import de.derfrzocker.fast.worldborder.fill.impl.BasicWorldBorderFillSetting;
+import de.derfrzocker.fast.worldborder.fill.impl.WorldBorderFillServiceImpl;
+import de.derfrzocker.spigot.utils.ChunkCoordIntPair;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_14_R1.CraftWorld;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.concurrent.TimeUnit;
@@ -13,7 +19,8 @@ import java.util.concurrent.TimeUnit;
 
 public class FastWorldBorderFill extends JavaPlugin {
 
-    private WorldBorderFill worldBorderFill;
+    private WorldBorderFillTask worldBorderFill;
+    private WorldBorderFillService worldBorderFillService;
 
     private long starTime;
     private long finishTime;
@@ -21,6 +28,7 @@ public class FastWorldBorderFill extends JavaPlugin {
     @Override
     public void onEnable() {
         new Metrics(this);
+        worldBorderFillService = new WorldBorderFillServiceImpl(this);
     }
 
     @Override
@@ -30,25 +38,7 @@ public class FastWorldBorderFill extends JavaPlugin {
                 sender.sendMessage("No operation is present");
             }
 
-            int totalRuns = 0;
-
-            for (WorldBorderThread worldBorderThread : worldBorderFill.threadSet) {
-                worldBorderThread.printStatus(getLogger());
-                totalRuns += worldBorderThread.runs;
-            }
-
-            getLogger().info("----------Information----------");
-            getLogger().info("To save size: " + worldBorderFill.toSave.size());
-            getLogger().info("To save NBT size: " + worldBorderFill.toSaveNBTTagCompound.size());
-            getLogger().info("To save Village place size: " + worldBorderFill.toSaveVillagePlace.size());
-            getLogger().info("Cache size: " + worldBorderFill.cache.size());
-            getLogger().info("Chunk Status: " + worldBorderFill.chunkStatus);
-            getLogger().info("Total runs: " + totalRuns);
-            getLogger().info("X: " + worldBorderFill.x);
-            getLogger().info("Z: " + worldBorderFill.z);
-            getLogger().info("XCap: " + worldBorderFill.xcap);
-            getLogger().info("ZCap: " + worldBorderFill.zcap);
-            getLogger().info("----------Information----------");
+            worldBorderFill.printStatus();
 
             sender.sendMessage("Status was print to console");
 
@@ -60,9 +50,9 @@ public class FastWorldBorderFill extends JavaPlugin {
             return true;
         }
 
-        if (args.length != 6) {
+        if (args.length != 8) {
             sender.sendMessage("Wrong amount of Arguments");
-            sender.sendMessage("Use /fast-fill <threads-amount> <chunk-radius> <sleep-time> <x-chunk-start-point> <z-chunk-start-point> <world>");
+            sender.sendMessage("Use /fast-fill <threads-amount> <batch-size> <x-radius> <z-radius> <sleep-time> <x-start-point> <z-start-point> <world>");
             return true;
         }
 
@@ -74,51 +64,62 @@ public class FastWorldBorderFill extends JavaPlugin {
             return true;
         }
 
-        final int chunkRadius;
+        final int batchSize;
         try {
-            chunkRadius = Integer.parseInt(args[1]) + 50;
+            batchSize = Integer.parseInt(args[1]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("The Chunk radius " + args[1] + " is not a valid number");
+            sender.sendMessage("The batch size " + args[1] + " is not a valid number");
             return true;
         }
 
-        if (chunkRadius % 50 != 0) {
-            sender.sendMessage("Chunk radius must be a multiply of 50");
+        final int xRadius;
+        try {
+            xRadius = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage("The x radius " + args[2] + " is not a valid number");
             return true;
         }
+
+        final int zRadius;
+        try {
+            zRadius = Integer.parseInt(args[3]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage("The z radius " + args[3] + " is not a valid number");
+            return true;
+        }
+
 
         final long sleepTime;
         try {
-            sleepTime = Long.parseLong(args[2]);
+            sleepTime = Long.parseLong(args[4]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("The Sleep time " + args[2] + " is not a valid number");
+            sender.sendMessage("The Sleep time " + args[4] + " is not a valid number");
             return true;
         }
 
         final int x;
         try {
-            x = Integer.parseInt(args[3]);
+            x = Integer.parseInt(args[5]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("The X start point " + args[3] + " is not a valid number");
+            sender.sendMessage("The X start point " + args[5] + " is not a valid number");
             return true;
         }
 
         final int z;
         try {
-            z = Integer.parseInt(args[4]);
+            z = Integer.parseInt(args[6]);
         } catch (NumberFormatException e) {
-            sender.sendMessage("The Z start point " + args[4] + " is not a valid number");
+            sender.sendMessage("The Z start point " + args[6] + " is not a valid number");
             return true;
         }
 
-        final World world = Bukkit.getWorld(args[5]);
+        final World world = Bukkit.getWorld(args[7]);
         if (world == null) {
-            sender.sendMessage("World " + args[5] + " not found");
+            sender.sendMessage("World " + args[7] + " not found");
             return true;
         }
-        final CraftWorld craftWorld = (CraftWorld) world;
 
-        craftWorld.setAutoSave(false);
+        world.setAutoSave(false);
 
         new Thread(() -> {
             try {
@@ -126,18 +127,17 @@ public class FastWorldBorderFill extends JavaPlugin {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            try {
-                starTime = System.currentTimeMillis();
-                worldBorderFill = new WorldBorderFill(this, craftWorld, craftWorld.getHandle().getChunkProvider().playerChunkMap, threadAmount, getLogger(), chunkRadius, x, z, sleepTime);
-                worldBorderFill.run();
-                finishTime = System.currentTimeMillis();
+            starTime = System.currentTimeMillis();
 
-                getLogger().info("Start Time: " + starTime);
-                getLogger().info("Finish Time: " + finishTime + " -> " + TimeUnit.MILLISECONDS.toMinutes(finishTime - starTime));
+            final WorldBorderFillSetting worldBorderFillSetting = new BasicWorldBorderFillSetting(batchSize, threadAmount, sleepTime, world.getName(), new BasicRegion(new ChunkCoordIntPair(x / 16, z / 16), xRadius / 16, zRadius / 16));
+            worldBorderFill = worldBorderFillService.createWorldBorderFillTask(worldBorderFillSetting);
+            worldBorderFill.run();
 
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                e.printStackTrace();
-            }
+            finishTime = System.currentTimeMillis();
+
+            getLogger().info("Start Time: " + starTime);
+            getLogger().info("Finish Time: " + finishTime + " -> " + TimeUnit.MILLISECONDS.toMinutes(finishTime - starTime));
+
         }).start();
 
         return true;
