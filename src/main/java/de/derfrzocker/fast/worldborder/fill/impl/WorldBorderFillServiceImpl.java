@@ -18,7 +18,7 @@ public class WorldBorderFillServiceImpl implements WorldBorderFillService {
     @Override
     public WorldBorderFillTask createWorldBorderFillTask(@NotNull WorldBorderFillSetting worldBorderFillSetting) {
         try {
-            return new WorldBorderFillTask_v1_14_R1(javaPlugin, javaPlugin.getLogger(), worldBorderFillSetting);
+            return new WorldBorderFillTask_v1_15_R1(javaPlugin, javaPlugin.getLogger(), worldBorderFillSetting);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException("Unexpected error while creating WorldBorderFillTask", e);
         }

@@ -9,10 +9,10 @@ import de.derfrzocker.fast.worldborder.fill.api.WorldBorderFillTask;
 import de.derfrzocker.fast.worldborder.fill.api.WorldBorderThread;
 import de.derfrzocker.fast.worldborder.fill.utils.Lock;
 import de.derfrzocker.spigot.utils.Pair;
-import net.minecraft.server.v1_14_R1.*;
+import net.minecraft.server.v1_15_R1.*;
 import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_14_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_15_R1.CraftWorld;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
-public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
+public class WorldBorderFillTask_v1_15_R1 implements WorldBorderFillTask {
     private final static Object DUMMY_OBJECT = new Object();
     private final Logger logger;
     private final JavaPlugin javaPlugin;
@@ -73,16 +73,14 @@ public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
                 public IChunkAccess load(ChunkCoordIntPair chunkCoordIntPair) {
                     try {
                         synchronized (playerChunkMap) {
-                            synchronized (playerChunkMap.cache) {
-                                NBTTagCompound nbtTagCompound = playerChunkMap.read(chunkCoordIntPair);
+                            NBTTagCompound nbtTagCompound = playerChunkMap.read(chunkCoordIntPair);
 
-                                if (nbtTagCompound == null)
-                                    return new ProtoChunk(chunkCoordIntPair, ChunkConverter.a);
+                            if (nbtTagCompound == null)
+                                return new ProtoChunk(chunkCoordIntPair, ChunkConverter.a);
 
-                                nbtTagCompound = playerChunkMap.getChunkData(craftWorld.getHandle().getWorldProvider().getDimensionManager(), supplier, nbtTagCompound, chunkCoordIntPair, craftWorld.getHandle());
+                            nbtTagCompound = playerChunkMap.getChunkData(craftWorld.getHandle().getWorldProvider().getDimensionManager(), supplier, nbtTagCompound, chunkCoordIntPair, craftWorld.getHandle());
 
-                                return ChunkRegionLoader.loadChunk(craftWorld.getHandle(), definedStructureManager, villagePlace, chunkCoordIntPair, nbtTagCompound);
-                            }
+                            return ChunkRegionLoader.loadChunk(craftWorld.getHandle(), definedStructureManager, villagePlace, chunkCoordIntPair, nbtTagCompound);
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -96,7 +94,7 @@ public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
     private ChunkStatus chunkStatus;
     private volatile boolean wait = false;
 
-    public WorldBorderFillTask_v1_14_R1(@NotNull final JavaPlugin javaPlugin, @NotNull final Logger logger, @NotNull final WorldBorderFillSetting worldBorderFillSetting) throws NoSuchFieldException, IllegalAccessException {
+    public WorldBorderFillTask_v1_15_R1(@NotNull final JavaPlugin javaPlugin, @NotNull final Logger logger, @NotNull final WorldBorderFillSetting worldBorderFillSetting) throws NoSuchFieldException, IllegalAccessException {
         Validate.notNull(javaPlugin, "JavaPlugin can not be null");
         Validate.notNull(logger, "Logger can not be null");
         Validate.notNull(worldBorderFillSetting, "WorldBorderFillSetting can not be null");
@@ -122,7 +120,7 @@ public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
         this.threads = new LinkedBlockingQueue<>(this.threadCount);
 
         {
-            Field field = PlayerChunkMap.class.getDeclaredField("m");
+            Field field = PlayerChunkMap.class.getDeclaredField("l");
             field.setAccessible(true);
             this.supplier = (Supplier<WorldPersistentData>) field.get(playerChunkMap);
         }
@@ -134,7 +132,7 @@ public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
         }
 
         {
-            Field field = PlayerChunkMap.class.getDeclaredField("n");
+            Field field = PlayerChunkMap.class.getDeclaredField("m");
             field.setAccessible(true);
             this.villagePlace = (VillagePlace) field.get(playerChunkMap);
         }
@@ -321,7 +319,65 @@ public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
                                     }
                                     if (chunkStatus != ChunkStatus.FULL) {
                                         worldBorderThread.setStatus("RUN FIRST CHUNKSTATUS");
-                                        chunkStatus.a(craftWorld.getHandle(), playerChunkMap.chunkGenerator, definedStructureManager, lightEngineThreaded, null, iChunkAccesses);
+                                        if(chunkStatus != ChunkStatus.FEATURES) {
+                                            chunkStatus.a(craftWorld.getHandle(), playerChunkMap.chunkGenerator, definedStructureManager, lightEngineThreaded, null, iChunkAccesses);
+                                        }else {
+                                            ProtoChunk var8 = (ProtoChunk)iChunkAccess;
+                                            var8.a(lightEngineThreaded);
+                                            if (!iChunkAccess.getChunkStatus().b(chunkStatus)) {
+                                                HeightMap.a(iChunkAccess, EnumSet.of(net.minecraft.server.v1_15_R1.HeightMap.Type.MOTION_BLOCKING, net.minecraft.server.v1_15_R1.HeightMap.Type.MOTION_BLOCKING_NO_LEAVES, net.minecraft.server.v1_15_R1.HeightMap.Type.OCEAN_FLOOR, net.minecraft.server.v1_15_R1.HeightMap.Type.WORLD_SURFACE));
+                                                RegionLimitedWorldAccess regionLimitedWorldAccess = new RegionLimitedWorldAccess(craftWorld.getHandle(), iChunkAccesses);
+                                                int i = regionLimitedWorldAccess.a();
+                                                int j = regionLimitedWorldAccess.b();
+                                                int k = i * 16;
+                                                int l = j * 16;
+                                                BlockPosition blockposition = new BlockPosition(k, 0, l);
+                                                BiomeBase biomebase = regionLimitedWorldAccess.d().a(blockposition.b(8, 8, 8));
+                                                SeededRandom seededrandom = new SeededRandom();
+                                                long i1 = seededrandom.a(regionLimitedWorldAccess.getSeed(), k, l);
+                                                WorldGenStage.Decoration[] aworldgenstage_decoration = WorldGenStage.Decoration.values();
+                                                int j1 = aworldgenstage_decoration.length;
+
+                                                for(int k1 = 0; k1 < j1; ++k1) {
+                                                    WorldGenStage.Decoration worldgenstage_decoration = aworldgenstage_decoration[k1];
+
+                                                    try {
+                                                        int var7 = 0;
+
+                                                        for(Iterator var9 = ((List)biomebase.a(worldgenstage_decoration)).iterator(); var9.hasNext(); ++var7) {
+                                                            WorldGenFeatureConfigured<?, ?> var10 = (WorldGenFeatureConfigured)var9.next();
+                                                            seededrandom.b(i1, var7, worldgenstage_decoration.ordinal());
+
+                                                            try {
+                                                                final String key = IRegistry.FEATURE.getKey(var10.b ).getKey();
+                                                                if(key.equals("decorated_flower") || key.equals("decorated")){
+                                                                    synchronized (DUMMY_OBJECT) {
+                                                                        var10.a(regionLimitedWorldAccess, playerChunkMap.chunkGenerator, seededrandom, blockposition);
+                                                                   }
+                                                                }else {
+                                                                    var10.a(regionLimitedWorldAccess, playerChunkMap.chunkGenerator, seededrandom, blockposition);
+                                                                }
+                                                            } catch (Exception var13) {
+                                                                System.out.println(IRegistry.FEATURE.getKey(var10.b ).getKey());
+                                                                System.out.println(((Object) var10.c).getClass().getName());
+                                                                System.out.println(var10.b);
+                                                                CrashReport var11 = CrashReport.a(var13, "Feature placement");
+                                                                var11.a("Feature").a("Id", IRegistry.FEATURE.getKey(var10.b)).a("Description", () -> {
+                                                                    return var10.b.toString();
+                                                                });
+                                                                throw new ReportedException(var11);
+                                                            }
+                                                        }
+                                                    } catch (Exception var17) {
+                                                        CrashReport crashreport = CrashReport.a(var17, "Biome decoration");
+                                                        crashreport.a("Generation").a("CenterX", i).a("CenterZ", j).a("Step", worldgenstage_decoration).a("Seed", i1).a("Biome", IRegistry.BIOME.getKey(biomebase));
+                                                        throw new ReportedException(crashreport);
+                                                    }
+                                                }
+                                                var8.a(chunkStatus);
+                                            }
+                                        }
+
                                         worldBorderThread.setStatus("RUN SECOND CHUNKSTATUS");
                                         chunkStatus.a(craftWorld.getHandle(), definedStructureManager, lightEngineThreaded, null, iChunkAccess);
                                         iChunkAccesses.forEach(iChunkAccess1 -> iChunkAccess1.setNeedsSaving(true));
@@ -494,13 +550,8 @@ public class WorldBorderFillTask_v1_14_R1 implements WorldBorderFillTask {
                 }
 
                 synchronized (playerChunkMap) {
-                    synchronized (playerChunkMap.cache) {
-                        try {
-                            playerChunkMap.write(pair.getFirst(), pair.getSecond());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                    playerChunkMap.a(pair.getFirst(), pair.getSecond());
+
                 }
             }
         } catch (InterruptedException e) {
