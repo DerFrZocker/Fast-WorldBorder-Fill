@@ -36,6 +36,7 @@ public class FastWorldBorderFill extends JavaPlugin {
         if (args.length == 1 && args[0].equals("status")) {
             if (worldBorderFill == null) {
                 sender.sendMessage("No operation is present");
+                return true;
             }
 
             worldBorderFill.printStatus();
