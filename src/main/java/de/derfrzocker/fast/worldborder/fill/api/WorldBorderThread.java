@@ -16,7 +16,7 @@ public class WorldBorderThread extends Thread {
     private final long sleepTime;
     private volatile Runnable runnable = null;
     private volatile int runs;
-    private volatile String status;
+    private volatile String status = "NOT STARTED";
     private int x;
     private int z;
 
